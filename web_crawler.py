@@ -3,6 +3,7 @@ import nltk
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
+from utils.file_handler import create_folders_for_alphabet, set_token_to_file
 
 # Global token-tfidf map
 token_tfidf_map = {}
@@ -37,6 +38,9 @@ def tokenizer(html_content):
     weighted_tokens.extend(tokens)
     return weighted_tokens
 
+def get_file_names_list(n):
+    return []
+
 def construct_index():
     # Ensure you have downloaded the necessary NLTK data
     nltk.download('punkt_tab')
@@ -46,6 +50,7 @@ def construct_index():
 
     # TODO: Update for loop to call the generator function 
     #       to return the next N file names.
+    N = None
     for file_names in get_file_names_list(N):
         # Get and clear the map before starting
         global token_tfidf_map
@@ -80,6 +85,19 @@ def construct_index():
                 token_tfidf_map[token].append((file_names[doc_index], score))
 
         # TODO: Write the map to the files.
+        
+
+    # Testing {"cat": "documentid, score?"}
+    # use it in the begining
+    create_folders_for_alphabet()
+
+    # test write
+    test_data_token = {'cat': "documentid,99"}
+    set_token_to_file(test_data_token)
+    test_data_token = {'cat': "documentid_2,199"}
+    set_token_to_file(test_data_token)
+    test_data_token = {'dog': "documentid_2,199"}
+    set_token_to_file(test_data_token)
 
     # TODO: Sort the postings in the files.
 
@@ -89,7 +107,8 @@ def main():
     # Call the construct_index function
     result = construct_index()
     print(result)
-    print(f"Number of file read from corpus: {file_name_counter}"
+    print(f"Number of file read from corpus: {file_name_counter}")
+    
 
 if __name__ == "__main__":
     main()
