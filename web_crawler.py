@@ -1,3 +1,4 @@
+import os
 import json
 import nltk
 from nltk.stem import PorterStemmer
@@ -38,6 +39,24 @@ def tokenizer(html_content):
     weighted_tokens.extend(tokens)
     return weighted_tokens
 
+def get_next_batch(n, in_dir = './DEV/'): 
+    ''' gets the next n file paths each iteration. returns as list. '''
+
+    batch = []
+    for dir, _, file_names in os.walk(in_dir): 
+
+        if file_names: # if list isn't empty
+
+            for file_name in file_names: 
+                batch.append(os.path.join(dir, file_name))
+
+                if len(batch) == n: 
+                    yield batch
+                    batch = [] # reset batch after call
+
+
+    if batch: yield batch # if num of files doesn't divide nicely with n
+
 def get_file_names_list(n):
     return []
 
@@ -48,10 +67,12 @@ def construct_index():
     # Create a stemmer
     stemmer = PorterStemmer()
 
-    # TODO: Update for loop to call the generator function 
-    #       to return the next N file names.
-    N = None
-    for file_names in get_file_names_list(N):
+    # initialize generator
+    N = 5 # batch size
+    get_file_names_list = get_next_batch(N)
+
+    file_name_counter = 0
+    for file_names in get_file_names_list:
         # Get and clear the map before starting
         global token_tfidf_map
         token_tfidf_map.clear()
