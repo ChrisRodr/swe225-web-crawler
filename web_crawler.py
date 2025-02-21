@@ -4,8 +4,7 @@ import nltk
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
-from utils.file_handler import create_folders_for_alphabet, set_token_to_file
-
+from utils.file_handler import create_folders_for_alphabet, set_token_to_file, sort_csv_files
 # Global token-tfidf map
 token_tfidf_map = {}
 
@@ -121,6 +120,7 @@ def construct_index():
     set_token_to_file(test_data_token)
 
     # TODO: Sort the postings in the files.
+    sort_csv_files()
     # print("Sorting postings of the files...")
 
     return "Index constructed!"

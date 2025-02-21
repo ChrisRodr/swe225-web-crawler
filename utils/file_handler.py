@@ -66,3 +66,35 @@ def set_token_to_file(test_data_token):
             writer.writerow(content) 
         
         print(f"File created: {filename}")
+
+
+def sort_csv_files():
+
+    # Loop through each folder under the 'output' directory
+    output_dir = get_output_dir_from_config()
+    for folder in os.listdir(output_dir):
+        folder_path = os.path.join(output_dir, folder)
+        
+        if os.path.isdir(folder_path):
+            # Loop through each file in the folder
+            for file_name in os.listdir(folder_path):
+                file_path = os.path.join(folder_path, file_name)
+                
+                if file_name.endswith('.csv') and os.path.isfile(file_path):
+                    # Read and sort the CSV file by the second column
+                    sorted_rows = []
+                    with open(file_path, mode='r', newline='', encoding='utf-8') as f:
+                        csv_reader = csv.reader(f)
+                        header = next(csv_reader)  # Assuming first row is the header
+                        sorted_rows = sorted(csv_reader, key=lambda row: int(row[1]))
+
+                    # Create a new file to write the sorted data
+                    output_file_path = os.path.join(folder_path, f"sorted_{file_name}")
+                    with open(output_file_path, mode='w', newline='', encoding='utf-8') as f:
+                        csv_writer = csv.writer(f)
+                        # Write the header followed by the sorted rows
+                        csv_writer.writerow(header)
+                        csv_writer.writerows(sorted_rows)
+
+                    print(f"Sorted file created: {output_file_path}")
+                    
