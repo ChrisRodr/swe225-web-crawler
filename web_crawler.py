@@ -57,9 +57,6 @@ def get_next_batch(n, in_dir = './DEV/'):
 
     if batch: yield batch # if num of files doesn't divide nicely with n
 
-def get_file_names_list(n):
-    return []
-
 def construct_index():
     # Ensure you have downloaded the necessary NLTK data
     nltk.download('punkt_tab')
@@ -71,7 +68,7 @@ def construct_index():
     N = 5 # batch size
     get_file_names_list = get_next_batch(N)
 
-    file_name_counter = 0
+    global file_name_counter
     for file_names in get_file_names_list:
         # Get and clear the map before starting
         global token_tfidf_map
