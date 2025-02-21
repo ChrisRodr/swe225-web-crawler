@@ -64,8 +64,10 @@ def construct_index():
     # Create a stemmer
     stemmer = PorterStemmer()
 
+    print("Writing partial indices...")
+
     # initialize generator
-    N = 5 # batch size
+    N = 5_000 # batch size
     get_file_names_list = get_next_batch(N)
 
     global file_name_counter
@@ -85,6 +87,7 @@ def construct_index():
             stemmed_tokens = [stemmer.stem(token) for token in tokens]
             documents.append(" ".join(stemmed_tokens))
             file_name_counter = file_name_counter + 1
+            print(f"\rFiles read: {file_name_counter}", end='')
     
         # Calculate TF-IDF scores
         vectorizer = TfidfVectorizer()
@@ -118,6 +121,7 @@ def construct_index():
     set_token_to_file(test_data_token)
 
     # TODO: Sort the postings in the files.
+    # print("Sorting postings of the files...")
 
     return "Index constructed!"
 
