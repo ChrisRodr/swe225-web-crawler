@@ -81,9 +81,11 @@ def construct_index():
     batch_idx = 0
     timer_start = time.time()
 
-    for file_names in get_file_names_list:
+    for idx, file_names in enumerate(get_file_names_list):
 
         batch_idx += 1
+        if batch_idx not in range(start_idx, end_idx+1): continue
+
         print(f"\rbatch #{batch_idx}", end="")
 
         # Get and clear the map before starting
@@ -156,7 +158,7 @@ def main():
 
 if __name__ == "__main__":
     
-    purge_output = True
+    purge_output = False
     if purge_output: 
         ans = input("warning!!! are you sure you want to purge the output directory and all its contents? (y/n)\n")
         
@@ -166,5 +168,18 @@ if __name__ == "__main__":
             print('directory removed.')
         else: 
             print('preserving the directory.')
+
+    # split workload using batch_size = 50
+    # # to run all files:
+    # start_idx, end_idx = 0, 1108
+
+    # to run first third: 
+    start_idx, end_idx = 0, 369
+
+    # # to run middle third: 
+    # start_idx, end_idx = 370, 739
+
+    # # to run last third: 
+    # start_idx, end_idx = 740, 1108
     
     main()

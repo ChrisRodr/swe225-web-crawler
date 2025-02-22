@@ -51,10 +51,12 @@ def set_token_to_file(test_data_token):
         # Determine the folder prefix from the first letter of the key (e.g., 'c' for 'cat')
         folder_prefix = key[0].lower()
         if folder_prefix.isdigit(): folder_prefix = "numbers"
-        if folder_prefix == "_": 
-            print(f"\nwarning: the following token starts with underscore: {key}. skipping token.\n")
-            continue
+
         folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+
+        if not os.path.isdir(folder_path): 
+            print(f"\nwarning: the following token does not start with a valid character: {key}. skipping token.\n")
+            continue
         
         # Prepare the filename and the content for the CSV file
         filename = os.path.join(folder_path, f"{key}.csv")
