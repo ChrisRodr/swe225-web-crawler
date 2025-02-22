@@ -2,6 +2,7 @@ import os
 import csv
 import configparser
 
+
 def get_output_dir_from_config(config_file='config.ini'):
     """
     Reads the output_dir from the config file.
@@ -22,10 +23,6 @@ def create_folders_for_alphabet():
     """
     # Check if the output directory exists, if not, create it
     output_dir = get_output_dir_from_config()
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print(f"Created base directory: {output_dir}")
     
     # Loop through A to Z and create each folder
     for letter in range(97, 123):  
@@ -34,10 +31,12 @@ def create_folders_for_alphabet():
         
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-            print(f"Created folder: {folder_path}")
-        else:
-            print(f"Folder already exists: {folder_path}")
+        print(f"Created folder for each letter.")
 
+    number_dir = os.path.join(output_dir, "numbers")
+    if not os.path.isdir(number_dir): 
+        os.makedirs(number_dir)
+        print(f'created folder for numbers.')
 
 
 def set_token_to_file(test_data_token):
@@ -48,25 +47,23 @@ def set_token_to_file(test_data_token):
     :param test_data_token: Dictionary containing the data for the file. Example: {'cat': "documentid,99"}
     """
     for key, value in test_data_token.items():
+
         # Determine the folder prefix from the first letter of the key (e.g., 'c' for 'cat')
         folder_prefix = key[0].lower()
+        if folder_prefix.isdigit(): folder_prefix = "numbers"
+        if folder_prefix == "_": 
+            print(f"\nwarning: the following token starts with underscore: {key}. skipping token.\n")
+            continue
         folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
-        
-        # I think we dont need it 
-        # if not os.path.exists(folder_path):
-        #     os.makedirs(folder_path)
         
         # Prepare the filename and the content for the CSV file
         filename = os.path.join(folder_path, f"{key}.csv")
-        content = value.split(",") 
-
+   
         # Write the content to the CSV file
-        with open(filename, mode='a', newline='') as file:
+        with open(filename, mode='a+', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(content) 
+            writer.writerows(value) 
         
-        print(f"File created: {filename}")
-
 
 def sort_csv_files():
 
