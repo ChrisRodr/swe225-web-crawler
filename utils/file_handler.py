@@ -62,10 +62,12 @@ def set_token_to_file(test_data_token):
         filename = os.path.join(folder_path, f"{key}.csv")
    
         # Write the content to the CSV file
-        with open(filename, mode='a+', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(value) 
-        
+        try:
+            with open(filename, mode='a+', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(value) 
+        except:
+            print(f"there was a problem with writing to the file: {filename}.")
 
 def sort_csv_files():
 
