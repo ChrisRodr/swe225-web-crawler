@@ -1,10 +1,13 @@
-import os
+import os, shutil
 import json
 import nltk
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from utils.file_handler import create_folders_for_alphabet, set_token_to_file, sort_csv_files
+import re
+import time 
+
 # Global token-tfidf map
 token_tfidf_map = {}
 
@@ -25,6 +28,8 @@ def tokenizer(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
     # Extract text content
     text = soup.get_text()
+    text = re.sub(r"[^a-zA-Z0-9]", " ", text) # get only alphanumeric characters
+    # text = text.replace("_", " ") # also exclude underscores, but this doesn't work for some reason
     tokens = nltk.word_tokenize(text)
     
     # Find and weight words in headers and bold tags separately
@@ -48,6 +53,7 @@ def get_next_batch(n, in_dir = './DEV/'):
 
             for file_name in file_names: 
                 batch.append(os.path.join(dir, file_name))
+                # print(file_name)
 
                 if len(batch) == n: 
                     yield batch
@@ -66,11 +72,20 @@ def construct_index():
     print("Writing partial indices...")
 
     # initialize generator
-    N = 5_000 # batch size
+    N = 50 # batch size (don't make it too small)
     get_file_names_list = get_next_batch(N)
 
+    create_folders_for_alphabet()
+
     global file_name_counter
+    batch_idx = 0
+    timer_start = time.time()
+
     for file_names in get_file_names_list:
+
+        batch_idx += 1
+        print(f"\rbatch #{batch_idx}", end="")
+
         # Get and clear the map before starting
         global token_tfidf_map
         token_tfidf_map.clear()
@@ -86,7 +101,11 @@ def construct_index():
             stemmed_tokens = [stemmer.stem(token) for token in tokens]
             documents.append(" ".join(stemmed_tokens))
             file_name_counter = file_name_counter + 1
-            print(f"\rFiles read: {file_name_counter}", end='')
+
+            if file_name_counter%1000==0: 
+                print(f"\ntime for 1000 files: {time.time() - timer_start:.4f} seconds\n")
+                timer_start = time.time()
+            # print(f"\rFiles read: {file_name_counter} / 55,393", end='') # tot num files = 55,393
     
         # Calculate TF-IDF scores
         vectorizer = TfidfVectorizer()
@@ -100,28 +119,31 @@ def construct_index():
         for doc_index, doc_scores in enumerate(tfidf_scores):
             for word_index, score in enumerate(doc_scores):
                 token = feature_names[word_index]
+                score = score.item()
                 if token not in token_tfidf_map:
                     token_tfidf_map[token] = []
-                token_tfidf_map[token].append((file_names[doc_index], score))
+                token_tfidf_map[token].append([file_names[doc_index], score])
 
         # TODO: Write the map to the files.
+
+        set_token_to_file(token_tfidf_map)
         
 
-    # Testing {"cat": "documentid, score?"}
-    # use it in the begining
-    create_folders_for_alphabet()
+    # # Testing {"cat": "documentid, score?"}
+    # # use it in the begining
+    # create_folders_for_alphabet()
 
-    # test write
-    test_data_token = {'cat': "documentid,99"}
-    set_token_to_file(test_data_token)
-    test_data_token = {'cat': "documentid_2,199"}
-    set_token_to_file(test_data_token)
-    test_data_token = {'dog': "documentid_2,199"}
-    set_token_to_file(test_data_token)
+    # # test write
+    # test_data_token = {'cat': "documentid,99"}
+    # set_token_to_file(test_data_token)
+    # test_data_token = {'cat': "documentid_2,199"}
+    # set_token_to_file(test_data_token)
+    # test_data_token = {'dog': "documentid_2,199"}
+    # set_token_to_file(test_data_token)
 
-    # TODO: Sort the postings in the files.
+    # # TODO: Sort the postings in the files.
+    print("Sorting postings of the files...")
     sort_csv_files()
-    # print("Sorting postings of the files...")
 
     return "Index constructed!"
 
@@ -133,4 +155,16 @@ def main():
     
 
 if __name__ == "__main__":
+    
+    purge_output = True
+    if purge_output: 
+        ans = input("warning!!! are you sure you want to purge the output directory and all its contents? (y/n)\n")
+        
+        if ans=='y': 
+            print('removing directory')
+            shutil.rmtree('./output')
+            print('directory removed.')
+        else: 
+            print('preserving the directory.')
+    
     main()
