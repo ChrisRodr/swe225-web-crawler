@@ -10,13 +10,13 @@ This function removes all punctuation and separates the words.
 For example "hello*world" becomes "hello world" and will count as 2 words.
 The idea is that punctuation does not count as a token, and only words with alphanumeric characters are counted.
 """
-def tokenize(textFilePath):
+def tokenize(text):
 	# Exclude both underscore and apostrophe from punctuation
 	all_punctuation = string.punctuation.replace('_', '').replace("'", '') + "¡¿""''«»–—‒…‽†‡"
 
 	tokens = []
 
-	line = ' '.join(line.split())
+	line = ' '.join(text.split())
 	line = line.translate(str.maketrans(all_punctuation, ' ' * len(all_punctuation))).lower()
 	tokens.extend(line.split())
 

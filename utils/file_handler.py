@@ -69,6 +69,39 @@ def set_token_to_file(test_data_token):
         except:
             print(f"there was a problem with writing to the file: {filename}.")
 
+def set_token_to_file_2(test_data_token):
+    """
+    Creates a CSV file based on the provided token and stores it in the correct subfolder
+    under 'output/<prefix>/' where <prefix> is the first letter of the key in the dictionary.
+    
+    :param test_data_token: Dictionary containing the data for the file. Example: {'cat': "documentid,99"}
+    """
+    for key, value in test_data_token.items():
+
+        # Determine the folder prefix from the first letter of the key (e.g., 'c' for 'cat')
+        folder_prefix = key[0].lower()
+        if folder_prefix.isdigit(): folder_prefix = "numbers"
+
+        folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+
+        if not os.path.isdir(folder_path): 
+            print(f"\nwarning: the following token does not start with a valid character: {key}. skipping token.\n")
+            continue
+        
+        # Prepare the filename and the content for the CSV file
+        filename = os.path.join(folder_path, f"{key}.csv")
+   
+        # Write the content to the CSV file
+        try:
+            with open(filename, mode='a+', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows([ posting.values() for posting in value ]) 
+        except Exception as e:
+            print(type(value))
+            print(value)
+            print(e)
+            print(f"there was a problem with writing to the file: {filename}.")
+
 def sort_csv_files():
 
     # Loop through each folder under the 'output' directory
@@ -99,3 +132,37 @@ def sort_csv_files():
 
                     print(f"Sorted file created: {output_file_path}")
                     
+
+def update_posting_duplicates_and_sort():
+
+    postings = {}
+
+    # Loop through each folder under the 'output' directory
+    output_dir = get_output_dir_from_config()
+    for folder in os.listdir(output_dir):
+        folder_path = os.path.join(output_dir, folder)
+        
+        if os.path.isdir(folder_path):
+            # Loop through each file in the folder
+            for file_name in os.listdir(folder_path):
+                file_path = os.path.join(folder_path, file_name)
+
+                if file_name.endswith('.csv') and os.path.isfile(file_path):
+
+                    with open(file_path, mode='r', newline='', encoding='utf-8') as f:
+                        csv_reader = csv.reader(f)
+                        for row in csv_reader:
+                            postings[row[0]] = (row[1], row[2])
+
+
+
+                    with open(file_path, mode='w', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+
+                        rows = []
+                        for doc_id, values in postings.items():
+                            rows.append((doc_id, values[0], values[1]))
+
+                        sorted_rows = sorted(rows, key=lambda x: float(x[2]), reverse=True)
+
+                        writer.writerows(sorted_rows)
