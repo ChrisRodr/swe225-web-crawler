@@ -182,3 +182,32 @@ def update_posting_duplicates_and_sort():
                         sorted_rows = sorted(rows, key=lambda x: float(x[2]), reverse=True)
 
                         writer.writerows(sorted_rows)
+
+def postings_from_file(token):
+    # Determine the folder prefix from the first letter of the token (e.g., 'c' for 'cat')
+    folder_prefix = token[0].lower()
+    if folder_prefix.isdigit(): folder_prefix = "numbers"
+
+    folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+
+    if not os.path.isdir(folder_path): 
+        folder_path = os.path.join(get_output_dir_from_config(), "others")
+    
+    # Prepare the filename and the content for the CSV file
+    filename = os.path.join(folder_path, f"{get_file_name_hash_value(token)}.csv")
+
+    postings = []
+    if os.path.exists(filename):
+        with open(filename, mode='r', newline='', encoding='utf-8') as f:
+            csv_reader = csv.reader(f)
+            # TODO: For now it reads all of them. 
+            # If the query time is too slow, then consider retreiving less...
+            for row in csv_reader:
+                postings.append({
+                    'doc_id': row[0],
+                    'tf': row[1],
+                    'tfidf': row[2],
+                    })
+
+    return postings
+        
