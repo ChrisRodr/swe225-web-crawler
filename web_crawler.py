@@ -5,6 +5,7 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from utils.file_handler import create_folders_for_alphabet, set_token_to_file, sort_csv_files
+from utils.tokenizer import tokenize
 import re
 import time 
 
@@ -22,21 +23,30 @@ def read_json(file_name):
 
 def tokenizer(html_content):
     # TODO: Adjust header weights
-    header_weights = {'title': 50, 'h1': 21, 'h2': 18, 'h3': 15, 'h4': 12, 'h5': 9, 'h6': 6, 'b': 3}
+    header_weights = {
+        'title': 50,
+        'h1'   : 21,
+        'h2'   : 18,
+        'h3'   : 15,
+        'h4'   : 12,
+        'h5'   : 9,
+        'h6'   : 6,
+        'b'    : 3,
+    }
     
     # Parse the HTML content
     soup = BeautifulSoup(html_content, "html.parser")
     # Extract text content
     text = soup.get_text()
-    text = re.sub(r"[^a-zA-Z0-9]", " ", text) # get only alphanumeric characters
-    # text = text.replace("_", " ") # also exclude underscores, but this doesn't work for some reason
-    tokens = nltk.word_tokenize(text)
+    tokens = tokenize(text)
+
+    alpha_numeric_tokens = tokens
     
     # Find and weight words in headers and bold tags separately
     weighted_tokens = []
     for tag, weight in header_weights.items():
         for header in soup.find_all(tag):
-            header_tokens = nltk.word_tokenize(header.get_text())
+            header_tokens = tokenize(header.get_text())
             weighted_tokens.extend(header_tokens * weight)
     
     # Combine regular tokens
@@ -72,7 +82,7 @@ def construct_index():
     print("Writing partial indices...")
 
     # initialize generator
-    N = 50 # batch size (don't make it too small)
+    N = 1 # batch size (don't make it too small)
     get_file_names_list = get_next_batch(N)
 
     create_folders_for_alphabet()
@@ -84,9 +94,6 @@ def construct_index():
     for idx, file_names in enumerate(get_file_names_list):
 
         batch_idx += 1
-        if batch_idx not in range(start_idx, end_idx+1): continue
-
-        print(f"\rbatch #{batch_idx}", end="")
 
         # Get and clear the map before starting
         global token_tfidf_map
@@ -107,7 +114,8 @@ def construct_index():
             if file_name_counter%1000==0: 
                 print(f"\ntime for 1000 files: {time.time() - timer_start:.4f} seconds\n")
                 timer_start = time.time()
-            # print(f"\rFiles read: {file_name_counter} / 55,393", end='') # tot num files = 55,393
+            else:
+                print(f"\rFiles read: {file_name_counter} / 55,393 - batch #{batch_idx}", end='') # tot num files = 55,393
     
         # Calculate TF-IDF scores
         vectorizer = TfidfVectorizer()
@@ -126,24 +134,13 @@ def construct_index():
                     token_tfidf_map[token] = []
                 token_tfidf_map[token].append([file_names[doc_index], score])
 
-        # TODO: Write the map to the files.
-
+        # Write the map to the files.
         set_token_to_file(token_tfidf_map)
-        
 
-    # # Testing {"cat": "documentid, score?"}
-    # # use it in the begining
-    # create_folders_for_alphabet()
+        # DEBUG Line
+        return
 
-    # # test write
-    # test_data_token = {'cat': "documentid,99"}
-    # set_token_to_file(test_data_token)
-    # test_data_token = {'cat': "documentid_2,199"}
-    # set_token_to_file(test_data_token)
-    # test_data_token = {'dog': "documentid_2,199"}
-    # set_token_to_file(test_data_token)
-
-    # # TODO: Sort the postings in the files.
+    # Sort the postings in the files.
     print("Sorting postings of the files...")
     sort_csv_files()
 
@@ -168,18 +165,5 @@ if __name__ == "__main__":
             print('directory removed.')
         else: 
             print('preserving the directory.')
-
-    # split workload using batch_size = 50
-    # # to run all files:
-    # start_idx, end_idx = 0, 1108
-
-    # to run first third: 
-    start_idx, end_idx = 0, 369
-
-    # # to run middle third: 
-    # start_idx, end_idx = 370, 739
-
-    # # to run last third: 
-    # start_idx, end_idx = 740, 1108
     
     main()
