@@ -1,7 +1,19 @@
 import os
 import csv
 import configparser
+import hashlib
 
+def get_file_name_hash_value(file_name):
+    # Create a SHA-256 hash object
+    hash_object = hashlib.sha256()
+    
+    # Update the hash object with the token name (converted to bytes)
+    hash_object.update(file_name.encode())
+    
+    # Get the hexadecimal representation of the hash value
+    hash_value = hash_object.hexdigest()
+    
+    return hash_value
 
 def get_output_dir_from_config(config_file='config.ini'):
     """
@@ -89,7 +101,7 @@ def set_token_to_file_2(test_data_token):
             continue
         
         # Prepare the filename and the content for the CSV file
-        filename = os.path.join(folder_path, f"{key}.csv")
+        filename = os.path.join(folder_path, f"{get_file_name_hash_value(key)}.csv")
    
         # Write the content to the CSV file
         try:
