@@ -1,4 +1,4 @@
-import os
+import os, shutil
 import csv
 import configparser
 import hashlib
@@ -15,26 +15,26 @@ def get_file_name_hash_value(file_name):
     
     return hash_value
 
-def get_output_dir_from_config(config_file='config.ini'):
-    """
-    Reads the output_dir from the config file.
+# def get_output_dir_from_config(config_file='config.ini'):
+#     """
+#     Reads the output_dir from the config file.
     
-    :param config_file: Path to the configuration file (default is 'config.ini').
-    :return: The output directory as specified in the config file.
-    """
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    return config.get('settings', 'output_dir', fallback='output') 
+#     :param config_file: Path to the configuration file (default is 'config.ini').
+#     :return: The output directory as specified in the config file.
+#     """
+#     config = configparser.ConfigParser()
+#     config.read(config_file)
+#     return config.get('settings', 'output_dir', fallback='output') 
 
 
-def create_folders_for_alphabet():
+def create_folders_for_alphabet(output_dir):
     """
     Creates folders for each letter from A to Z under the specified output directory.
     
     :param output_dir: The base directory under which the folders will be created (default is 'output').
     """
     # Check if the output directory exists, if not, create it
-    output_dir = get_output_dir_from_config()
+    # output_dir = get_output_dir_from_config()
     
     # Loop through A to Z and create each folder
     for letter in range(97, 123):  
@@ -56,7 +56,7 @@ def create_folders_for_alphabet():
         print(f'created folder for others.')
 
 
-def set_token_to_file(test_data_token):
+def set_token_to_file(test_data_token, output_dir):
     """
     Creates a CSV file based on the provided token and stores it in the correct subfolder
     under 'output/<prefix>/' where <prefix> is the first letter of the key in the dictionary.
@@ -69,7 +69,8 @@ def set_token_to_file(test_data_token):
         folder_prefix = key[0].lower()
         if folder_prefix.isdigit(): folder_prefix = "numbers"
 
-        folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+        # folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+        folder_path = os.path.join(output_dir, folder_prefix)
 
         if not os.path.isdir(folder_path): 
             print(f"\nwarning: the following token does not start with a valid character: {key}. skipping token.\n")
@@ -86,7 +87,7 @@ def set_token_to_file(test_data_token):
         except:
             print(f"there was a problem with writing to the file: {filename}.")
 
-def set_token_to_file_2(test_data_token):
+def set_token_to_file_2(test_data_token, output_dir):
     """
     Creates a CSV file based on the provided token and stores it in the correct subfolder
     under 'output/<prefix>/' where <prefix> is the first letter of the key in the dictionary.
@@ -99,10 +100,12 @@ def set_token_to_file_2(test_data_token):
         folder_prefix = key[0].lower()
         if folder_prefix.isdigit(): folder_prefix = "numbers"
 
-        folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+        # folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+        folder_path = os.path.join(output_dir, folder_prefix)
 
         if not os.path.isdir(folder_path): 
-            folder_path = os.path.join(get_output_dir_from_config(), "others")
+            # folder_path = os.path.join(get_output_dir_from_config(), "others")
+            folder_path = os.path.join(output_dir, "others")
         
         # Prepare the filename and the content for the CSV file
         filename = os.path.join(folder_path, f"{get_file_name_hash_value(key)}.csv")
@@ -118,10 +121,10 @@ def set_token_to_file_2(test_data_token):
             print(e)
             print(f"there was a problem with writing to the file: {filename}.")
 
-def sort_csv_files():
+def sort_csv_files(output_dir):
 
     # Loop through each folder under the 'output' directory
-    output_dir = get_output_dir_from_config()
+    # output_dir = get_output_dir_from_config()
     for folder in os.listdir(output_dir):
         folder_path = os.path.join(output_dir, folder)
         
@@ -149,12 +152,12 @@ def sort_csv_files():
                     print(f"Sorted file created: {output_file_path}")
                     
 
-def update_posting_duplicates_and_sort():
+def update_posting_duplicates_and_sort(output_dir):
 
     postings = {}
 
     # Loop through each folder under the 'output' directory
-    output_dir = get_output_dir_from_config()
+    # output_dir = get_output_dir_from_config()
     for folder in os.listdir(output_dir):
         folder_path = os.path.join(output_dir, folder)
         
@@ -183,15 +186,15 @@ def update_posting_duplicates_and_sort():
 
                         writer.writerows(sorted_rows)
 
-def postings_from_file(token):
+def postings_from_file(token, output_dir):
     # Determine the folder prefix from the first letter of the token (e.g., 'c' for 'cat')
     folder_prefix = token[0].lower()
     if folder_prefix.isdigit(): folder_prefix = "numbers"
 
-    folder_path = os.path.join(get_output_dir_from_config(), folder_prefix)
+    folder_path = os.path.join(output_dir, folder_prefix)
 
     if not os.path.isdir(folder_path): 
-        folder_path = os.path.join(get_output_dir_from_config(), "others")
+        folder_path = os.path.join(output_dir, "others")
     
     # Prepare the filename and the content for the CSV file
     filename = os.path.join(folder_path, f"{get_file_name_hash_value(token)}.csv")
@@ -210,4 +213,17 @@ def postings_from_file(token):
                     })
 
     return postings
-        
+
+
+def remove_current_index(output_dir): 
+    ''' remake index saved to file '''
+    
+    ans = input("warning!!! are you sure you want to purge the output directory and all its contents? (y/n)\n")
+    
+    if ans=='y': 
+        if os.path.isdir(output_dir): 
+            print('removing directory')
+            shutil.rmtree(output_dir)
+            print('directory removed.')
+    else: 
+        print('preserving the directory.')
