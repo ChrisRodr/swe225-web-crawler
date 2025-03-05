@@ -7,7 +7,8 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from utils.file_handler import create_folders_for_alphabet, set_token_to_file_2, \
-            sort_csv_files, update_posting_duplicates_and_sort, postings_from_file
+            sort_csv_files, update_posting_duplicates_and_sort, postings_from_file, \
+            remove_current_index
 from utils.tokenizer import tokenize
 import re
 import time
@@ -148,35 +149,52 @@ def read_json(file_name):
         json_content = json.load(file)
     return json_content
 
-def get_next_batch(n, in_dir = './DEV/'): 
+def get_next_batch(chunk_idx, batch_size, in_dir = './DEV/'): 
     ''' gets the next n file paths each iteration. returns as list. '''
 
+    tot_num_files = 55_393
+    
+    if chunk_idx != 0:
+        chunk_size = tot_num_files // 3
+        start_idx = (chunk_idx-1)*chunk_size    
+        if chunk_idx==3:
+            end_idx = tot_num_files
+        else: 
+            end_idx = start_idx + chunk_size
+    else: 
+        chunk_size = tot_num_files
+        start_idx, end_idx = 0, tot_num_files
+    
+    global chunk_num_files
+    chunk_num_files = end_idx - start_idx
+        
     batch = []
-    for dir, _, file_names in os.walk(in_dir): 
-
-        if file_names: # if list isn't empty
-
-            for file_name in file_names: 
-                batch.append(os.path.join(dir, file_name))
-                if len(batch) == n: 
+    file_idx = 0
+    for sub_dir in sorted(os.listdir(in_dir)):
+        file_names = sorted(os.listdir(os.path.join(in_dir, sub_dir)))
+        for file_name in file_names: 
+            
+            if file_idx in range(start_idx, end_idx):
+                batch.append(os.path.join(in_dir, sub_dir, file_name))
+                
+                if len(batch) == batch_size: 
                     yield batch
                     batch = [] # reset batch after call
+            
+            file_idx += 1 # increment
+                    
+    if batch: yield batch # last batch
 
-
-    if batch: yield batch # if num of files doesn't divide nicely with n
-
-
-def construct_index():
+def construct_index(chunk_idx, batch_size=5_000):
     # Ensure you have downloaded the necessary NLTK data
     nltk.download('punkt_tab')
 
-    create_folders_for_alphabet()
+    create_folders_for_alphabet(output_dir)
 
     # initialize generator
     print("Writing partial indices...")
-    batch_size = 5_000 # batch size (don't make it too small)
     batch_number = 0
-    get_file_names_list = get_next_batch(batch_size)
+    get_file_names_list = get_next_batch(chunk_idx, batch_size)
     for idx, file_names in enumerate(get_file_names_list):
         batch_number += 1
         # Process each file
@@ -185,7 +203,7 @@ def construct_index():
             html_content = json_content["content"]
             term_freq = process_document(html_content)
             compute_tfidf(term_freq, file_name)
-            print(f"\rDocuments processed: {document_count} / 55,393 - batch_number: {batch_number} / {55393/batch_size}", end='')
+            print(f"\rDocuments processed: {document_count} / {chunk_num_files} - batch_number: {batch_number} / {math.ceil(chunk_num_files/batch_size)}", end='')
             sys.stdout.flush()
 
         # Update the tfidf scores in inverted index
@@ -195,12 +213,12 @@ def construct_index():
         # Write the map to the files.
         print("Writing the inverted index for this batch")
         global inverted_index
-        set_token_to_file_2(inverted_index)
+        set_token_to_file_2(inverted_index, output_dir)
 
     # Update the postings to only have one instanse of a file
     # And sort the postings.
     print("Updating and sorting postings")
-    update_posting_duplicates_and_sort()
+    update_posting_duplicates_and_sort(output_dir)
 
     print("Index Constructed")
 
@@ -238,7 +256,7 @@ def grab_postings(token_array):
     posting_map = {}
 
     for token in token_array:
-        posting_map[token] = postings_from_file(token)
+        posting_map[token] = postings_from_file(token, output_dir)
 
     # Debug to print out postings from file
     # for key, value in posting_map.items():
@@ -305,23 +323,29 @@ def query_data():
 
 def main():
 
+    ### OPTIONS ###
+    
     # Selection between creating the index and querying the data
     construct_index_flag = True
+    batch_size = 500
+    purge_output = True
+
+    ###############
+
+    global output_dir
 
     if construct_index_flag:
-        purge_output = True
-        if purge_output: 
-            ans = input("warning!!! are you sure you want to purge the output directory and all its contents? (y/n)\n")
-            
-            if ans=='y': 
-                print('removing directory')
-                shutil.rmtree('./output')
-                print('directory removed.')
-            else: 
-                print('preserving the directory.')
+        # first argument - data chunk / second argument - output dir
+        if len(sys.argv) != 3: 
+            exit('select data chunk to process as an argument (0 (all), 1, 2, or 3) and set output dir.')
+        chunk_idx = int(sys.argv[1])
+        assert chunk_idx in range(4), 'chunk_idx should be 0, 1, 2, or 3. '
+        output_dir = sys.argv[2]
+        
+        if purge_output: remove_current_index(output_dir)
 
         # Call the construct_index function
-        construct_index()
+        construct_index(chunk_idx, batch_size)
         print(f"Number of file read from corpus: {document_count}")
 
     else:
