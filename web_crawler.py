@@ -23,7 +23,7 @@ import sys
 # Global document count and document frequencies
 # These are to keep track of all the documents and the frequency of each 
 # token in all the documents. Needed for tf_idf scoring.
-document_count = 0
+document_count = 55_393
 document_frequencies = defaultdict(int)
 
 # This is the inverted index that will be updated along the way
@@ -76,9 +76,7 @@ def process_document(doc_text):
 		and the document count.
 		It will update the inverted index for
     """
-    global document_count
     global document_frequencies
-    document_count += 1
 
     # Tokenize the document (simple split; consider using NLTK or spaCy for better tokenization)
     tokens = tokenizer(doc_text)
@@ -123,26 +121,6 @@ def compute_tfidf(term_frequencies, doc_id):
             'tfidf': tfidf_scores[term]
         })
 
-def update_tfidf():
-    global document_frequencies
-    global document_count
-    global inverted_index
-
-    for term, postings in inverted_index.items():
-        inverted_index[term] = []
-
-        for posting in postings:
-            df = document_frequencies[term]
-            idf = math.log((document_count) / df)
-            tfidf = posting['tf'] * idf
-
-            inverted_index[term].append({
-                'doc_id': posting['doc_id'],
-                'tf': posting['tf'],
-                'ifidf': tfidf
-                })
-
-
 def read_json(file_name):
     # Read JSON content from a file
     with open(file_name, 'r', encoding='utf-8') as file:
@@ -186,6 +164,9 @@ def get_next_batch(chunk_idx, batch_size, in_dir = './DEV/'):
     if batch: yield batch # last batch
 
 def construct_index(chunk_idx, batch_size=5_000):
+
+    global inverted_index
+
     # Ensure you have downloaded the necessary NLTK data
     nltk.download('punkt_tab')
 
@@ -193,26 +174,26 @@ def construct_index(chunk_idx, batch_size=5_000):
 
     # initialize generator
     print("Writing partial indices...")
+    local_document_count = 0
     batch_number = 0
     get_file_names_list = get_next_batch(chunk_idx, batch_size)
     for idx, file_names in enumerate(get_file_names_list):
+
+        inverted_index.clear()
+
         batch_number += 1
         # Process each file
         for file_name in file_names:
             json_content = read_json(file_name)
             html_content = json_content["content"]
             term_freq = process_document(html_content)
+            local_document_count += 1
             compute_tfidf(term_freq, file_name)
-            print(f"\rDocuments processed: {document_count} / {chunk_num_files} - batch_number: {batch_number} / {math.ceil(chunk_num_files/batch_size)}", end='')
+            print(f"\rDocuments processed: {local_document_count} / {chunk_num_files} - batch_number: {batch_number} / {math.ceil(chunk_num_files/batch_size)}", end='')
             sys.stdout.flush()
 
-        # Update the tfidf scores in inverted index
-        print("\nUpdating tfidf for this batch.")
-        update_tfidf()
-
         # Write the map to the files.
-        print("Writing the inverted index for this batch")
-        global inverted_index
+        print("\nWriting the inverted index for this batch")
         set_token_to_file_2(inverted_index, output_dir)
 
     # Update the postings to only have one instanse of a file
