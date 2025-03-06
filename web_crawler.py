@@ -67,6 +67,25 @@ def tokenizer(html_content):
 
     return stemmed_tokens
 
+def load_mapping_table(mapping_file: str):
+    mapping_dict = {}
+    
+    # Open and read the mapping table file
+    with open(mapping_file, 'r') as file:
+        for line in file:
+            parts = line.strip().split(" ", 1)
+            
+            if len(parts) == 2:
+                id = int(parts[0])  
+                file_path = parts[1] 
+                file_hash = hash(file_path)
+                
+                # Store in dictionary: file_hash -> id
+                mapping_dict[file_path] = id
+    
+    return mapping_dict
+
+
 def process_document(doc_text):
     """
 		Doc id is the path to the document.
@@ -117,8 +136,7 @@ def compute_tfidf(term_frequencies, doc_id):
         # Update the inverted index
         inverted_index[term].append({
             'doc_id': doc_id,
-            'tf': tf,
-            'tfidf': tfidf_scores[term]
+            'tfidf': round(tfidf_scores[term], 2)
         })
 
 def read_json(file_name):
@@ -172,6 +190,11 @@ def construct_index(chunk_idx, batch_size=5_000):
 
     create_folders_for_alphabet(output_dir)
 
+
+    # load mapping table
+    mapping_file = 'mapping_table.txt'
+    target_mapping = load_mapping_table(mapping_file)
+
     # initialize generator
     print("Writing partial indices...")
     local_document_count = 0
@@ -188,7 +211,7 @@ def construct_index(chunk_idx, batch_size=5_000):
             html_content = json_content["content"]
             term_freq = process_document(html_content)
             local_document_count += 1
-            compute_tfidf(term_freq, file_name)
+            compute_tfidf(term_freq, target_mapping[file_name])
             print(f"\rDocuments processed: {local_document_count} / {chunk_num_files} - batch_number: {batch_number} / {math.ceil(chunk_num_files/batch_size)}", end='')
             sys.stdout.flush()
 
@@ -323,7 +346,7 @@ def main():
         assert chunk_idx in range(4), 'chunk_idx should be 0, 1, 2, or 3. '
         output_dir = sys.argv[2]
         
-        if purge_output: remove_current_index(output_dir)
+        #if purge_output: remove_current_index(output_dir)
 
         # Call the construct_index function
         construct_index(chunk_idx, batch_size)
