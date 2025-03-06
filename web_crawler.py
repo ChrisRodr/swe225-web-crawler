@@ -233,7 +233,7 @@ def construct_index(chunk_idx, batch_size=5_000):
 
 ###############################################################
 
-def tokenizer(query_string):
+def tokenizer_query(query_string):
     """
         Tokenizes the user query and stems the words.
         Only alpha numeric values.
@@ -253,7 +253,7 @@ def promt_user():
     print("Search MiniGoogle")
     user_input = input("="*50 + '\n')
     print("="*50)
-    return tokenizer(user_input)
+    return tokenizer_query(user_input)
     print(user_input)
 
 def grab_postings(token_array):
