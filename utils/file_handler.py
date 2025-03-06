@@ -3,6 +3,7 @@ import csv
 import configparser
 import hashlib
 
+
 def get_file_name_hash_value(file_name):
     # Create a SHA-256 hash object
     hash_object = hashlib.sha256()
@@ -171,7 +172,7 @@ def update_posting_duplicates_and_sort(output_dir):
                     with open(file_path, mode='r', newline='', encoding='utf-8') as f:
                         csv_reader = csv.reader(f)
                         for row in csv_reader:
-                            postings[row[0]] = (row[1], row[2])
+                            postings[row[0]] = row[1]
 
 
 
@@ -179,10 +180,10 @@ def update_posting_duplicates_and_sort(output_dir):
                         writer = csv.writer(f)
 
                         rows = []
-                        for doc_id, values in postings.items():
-                            rows.append((doc_id, values[0], values[1]))
+                        for doc_id, value in postings.items():
+                            rows.append((doc_id, value))
 
-                        sorted_rows = sorted(rows, key=lambda x: float(x[2]), reverse=True)
+                        sorted_rows = sorted(rows, key=lambda x: float(x[0]), reverse=True)
 
                         writer.writerows(sorted_rows)
 
@@ -205,11 +206,11 @@ def postings_from_file(token, output_dir):
             csv_reader = csv.reader(f)
             # TODO: For now it reads all of them. 
             # If the query time is too slow, then consider retreiving less...
+            docid = row[0].replace("./DEV/", "", 1)
             for row in csv_reader:
                 postings.append({
-                    'doc_id': row[0],
-                    'tf': row[1],
-                    'tfidf': row[2],
+                    'doc_id': docid,
+                    'tfidf': round(row[2], 2),
                     })
 
     return postings
