@@ -172,7 +172,7 @@ def update_posting_duplicates_and_sort(output_dir):
                     with open(file_path, mode='r', newline='', encoding='utf-8') as f:
                         csv_reader = csv.reader(f)
                         for row in csv_reader:
-                            postings[row[0]] = (row[1], row[2])
+                            postings[row[0]] = row[1]
 
 
 
@@ -180,10 +180,10 @@ def update_posting_duplicates_and_sort(output_dir):
                         writer = csv.writer(f)
 
                         rows = []
-                        for doc_id, values in postings.items():
-                            rows.append((doc_id, values[0], values[1]))
+                        for doc_id, value in postings.items():
+                            rows.append((doc_id, value))
 
-                        sorted_rows = sorted(rows, key=lambda x: float(x[1]), reverse=True)
+                        sorted_rows = sorted(rows, key=lambda x: float(x[0]), reverse=True)
 
                         writer.writerows(sorted_rows)
 
