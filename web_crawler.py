@@ -67,7 +67,7 @@ def tokenizer(html_content):
 
     return stemmed_tokens
 
-def load_mapping_table(mapping_file: str):
+def load_mapping_table(mapping_file: str, reverse = False):
     mapping_dict = {}
     
     # Open and read the mapping table file
@@ -81,7 +81,10 @@ def load_mapping_table(mapping_file: str):
                 file_hash = hash(file_path)
                 
                 # Store in dictionary: file_hash -> id
-                mapping_dict[file_path] = id
+                if reverse:
+                    mapping_dict[id] = file_path
+                else:
+                    mapping_dict[file_path] = id
     
     return mapping_dict
 
@@ -309,8 +312,25 @@ def query_data():
 
     print("Printing the documents")
     start_time = time.time()
+
+    # load mapping table
+    mapping_file = 'mapping_table.txt'
+    target_mapping = load_mapping_table(mapping_file, True)
+
+
     for doc in document_list:
-        print(doc)
+        #print(target_mapping[int(doc)])
+        file_path = target_mapping[int(doc)]
+        import json
+        # Open and parse the JSON file
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+        # Extract the "url" value
+        url_value = data.get("url")
+
+        print(url_value)
+        
     end_time = time.time()
     print_doc_time = (end_time - start_time) * 1000 # In miliseconds
     print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
@@ -337,6 +357,7 @@ def main():
     ###############
 
     global output_dir
+    output_dir = "output"
 
     if construct_index_flag:
         # first argument - data chunk / second argument - output dir

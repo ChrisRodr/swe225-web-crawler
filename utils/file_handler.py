@@ -183,7 +183,7 @@ def update_posting_duplicates_and_sort(output_dir):
                         for doc_id, value in postings.items():
                             rows.append((doc_id, value))
 
-                        sorted_rows = sorted(rows, key=lambda x: float(x[0]), reverse=True)
+                        sorted_rows = sorted(rows, key=lambda x: float(x[1]), reverse=True)
 
                         writer.writerows(sorted_rows)
 
@@ -206,11 +206,10 @@ def postings_from_file(token, output_dir):
             csv_reader = csv.reader(f)
             # TODO: For now it reads all of them. 
             # If the query time is too slow, then consider retreiving less...
-            docid = row[0].replace("./DEV/", "", 1)
             for row in csv_reader:
                 postings.append({
-                    'doc_id': docid,
-                    'tfidf': round(row[2], 2),
+                    'doc_id': row[0],
+                    'tfidf': row[1]
                     })
 
     return postings
