@@ -311,15 +311,15 @@ def query_data():
     candidate_docs = set()
 
     for token, q_weight in query_vector.items():
-        postings = postings_from_file(token)
-        for doc_id, doc_tfidf in postings:
+        postings = postings_from_file(token, output_dir)
+        for posting in postings:
             # Accumulate contribution to dot product: (query weight * document TF-IDF)
-            dot_products[doc_id] += q_weight * doc_tfidf
-            candidate_docs.add(doc_id)
+            dot_products[posting['doc_id']] += q_weight * float(posting['tfidf'])
+            candidate_docs.add(posting['doc_id'])
 
     # Compute the document norms
     doc_vector = defaultdict(dict)  # mapping: doc_id -> {token: tfidf}
-    for token, postings in inverted_index_postings():
+    for token, postings in inverted_index_postings(output_dir):
         for doc_id, doc_tfidf in postings:
             doc_vector[doc_id][token] = doc_tfidf
 

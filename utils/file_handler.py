@@ -214,7 +214,7 @@ def postings_from_file(token, output_dir):
 
     return postings
 
-def inverted_index_postings():
+def inverted_index_postings(output_dir):
     for folder in os.listdir(output_dir):
         folder_path = os.path.join(output_dir, folder)
         
