@@ -214,6 +214,21 @@ def postings_from_file(token, output_dir):
 
     return postings
 
+def inverted_index_postings():
+    for folder in os.listdir(output_dir):
+        folder_path = os.path.join(output_dir, folder)
+        
+        if os.path.isdir(folder_path):
+            # Loop through each file in the folder
+            for file_name in os.listdir(folder_path):
+                file_path = os.path.join(folder_path, file_name)
+
+                if file_name.endswith('.csv') and os.path.isfile(file_path):
+
+                    with open(file_path, mode='r', newline='', encoding='utf-8') as f:
+                        csv_reader = csv.reader(f)
+                        for row in csv_reader:
+                            yield row
 
 def remove_current_index(output_dir): 
     ''' remake index saved to file '''
