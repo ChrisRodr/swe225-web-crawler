@@ -228,7 +228,7 @@ def inverted_index_postings(output_dir):
                     with open(file_path, mode='r', newline='', encoding='utf-8') as f:
                         csv_reader = csv.reader(f)
                         for row in csv_reader:
-                            yield row
+                            yield filename.split('.')[0], row
 
 def remove_current_index(output_dir): 
     ''' remake index saved to file '''

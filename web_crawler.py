@@ -320,7 +320,9 @@ def query_data():
     # Compute the document norms
     doc_vector = defaultdict(dict)  # mapping: doc_id -> {token: tfidf}
     for token, postings in inverted_index_postings(output_dir):
-        for doc_id, doc_tfidf in postings:
+        for row in postings:
+            doc_id = row[0]
+            doc_tfidf = row[1]
             doc_vector[doc_id][token] = doc_tfidf
 
     doc_norms = {}
