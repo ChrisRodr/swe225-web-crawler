@@ -88,6 +88,17 @@ def load_mapping_table(mapping_file: str, reverse = False):
     
     return mapping_dict
 
+def load_doc_norm():
+    doc_norm = {}
+    with open("doc_norms.txt", mode='r') as file:
+        for line in file:
+            parts = line.strip().split(" ")
+
+            if len(parts) == 2:
+                doc_id = parts[0]
+                norm = parts[1]
+                doc_norm[doc_id] = norm
+    return doc_norm
 
 def process_document(doc_text):
     """
@@ -318,18 +329,7 @@ def query_data():
             candidate_docs.add(posting['doc_id'])
 
     # Compute the document norms
-    doc_vector = defaultdict(dict)  # mapping: doc_id -> {token: tfidf}
-    for token, postings in inverted_index_postings(output_dir):
-        for row in postings:
-            doc_id = row[0]
-            doc_tfidf = row[1]
-            doc_vector[doc_id][token] = doc_tfidf
-
-    doc_norms = {}
-    for doc_id in candidate_docs:
-        # Sum the squares of TF-IDF scores for all tokens in the document.
-        norm_sq = sum(weight ** 2 for weight in doc_vector[doc_id].values())
-        doc_norms[doc_id] = math.sqrt(norm_sq)
+    doc_norms = load_doc_norm()
 
     # Compute the cosine imilarity for each candidate document
     cosine_similarities = {}
