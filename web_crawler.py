@@ -404,9 +404,9 @@ def main():
     ### OPTIONS ###
     
     # Selection between creating the index and querying the data
-    construct_index_flag = True
+    construct_index_flag = False
     batch_size = 500
-    purge_output = True
+    purge_output = False
 
     ###############
 
