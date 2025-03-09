@@ -3,7 +3,6 @@ from collections import defaultdict
 from utils.file_handler import inverted_index_postings
 
 def generate_doc_norm_file(output_dir):
-
 	# Compute squared sum of TF-IDF values for each document
 	doc_squared_sum = defaultdict(float)
 	for token, postings in inverted_index_postings(output_dir):
@@ -29,4 +28,4 @@ def main():
 	generate_doc_norm_file("output")
 
 if __name__ == "__main__":
-    main()
+	main()
