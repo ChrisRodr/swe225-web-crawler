@@ -1,6 +1,7 @@
 import math
 from collections import defaultdict
 from utils.file_handler import inverted_index_postings
+import sys
 
 def generate_doc_norm_file(output_dir):
 	print("Reading files and creating doc_squared_sum...")
