@@ -95,8 +95,8 @@ def load_doc_norm():
             parts = line.strip().split(" ")
 
             if len(parts) == 2:
-                doc_id = parts[0]
-                norm = parts[1]
+                doc_id = int(parts[0])
+                norm = float(parts[1])
                 doc_norm[doc_id] = norm
     return doc_norm
 
