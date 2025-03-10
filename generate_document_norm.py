@@ -20,7 +20,7 @@ def generate_doc_norm_file(output_dir):
 	print("\nCalculating the doc_norms")
 	doc_norms = {doc_id: math.sqrt(sq_sum) for doc_id, sq_sum in doc_squared_sum.items()}
 	print("Sorting the doc norms by doc_id")
-	sorted_doc_norms = dict(sorted(doc_norms))
+	sorted_doc_norms = dict(sorted(doc_norms.items(), key=lambda x: int(x[0])))
 
 	# Write this to a file
 	doc_norm_file = "doc_norms.txt"
