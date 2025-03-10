@@ -310,28 +310,45 @@ def query_data():
     start_time = time.time()
 
     # Build query vector
+    start_time = time.time()
     query_vector = defaultdict(int)
     for token in tokened_query:
         query_vector[token] += 1
+    end_time = time.time()
+    build_query_vector_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Building query vector took: {build_query_vector_time:.2f} ms")
+
 
     # Compute query norm
+    start_time = time.time()
     query_norm = math.sqrt(sum(weight ** 2 for weight in query_vector.values()))
+    end_time = time.time()
+    compute_query_norm_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing query norm took: {compute_query_norm_time:.2f} ms")
 
     # Compute dot product from inverted index
+    start_time = time.time()
     dot_products = defaultdict(float)
     candidate_docs = set()
-
     for token, q_weight in query_vector.items():
         postings = postings_from_file(token, output_dir)
         for posting in postings:
             # Accumulate contribution to dot product: (query weight * document TF-IDF)
             dot_products[posting['doc_id']] += q_weight * float(posting['tfidf'])
             candidate_docs.add(posting['doc_id'])
+    end_time = time.time()
+    compute_dot_product_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing dot product took: {compute_dot_product_time:.2f} ms")
 
-    # Compute the document norms
+    # Fetch the document norms
+    start_time = time.time()
     doc_norms = load_doc_norm()
+    end_time = time.time()
+    fetch_doc_norm_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Fetching document norms took: {fetch_doc_norm_time:.2f} ms")
 
     # Compute the cosine imilarity for each candidate document
+    start_time = time.time()
     cosine_similarities = {}
     for doc_id in candidate_docs:
         # Avoid division by zero
@@ -340,9 +357,16 @@ def query_data():
         else:
             cosine_sim = 0.0
         cosine_similarities[doc_id] = cosine_sim
+    end_time = time.time()
+    compute_cos_sin_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing cosine similarities took: {compute_cos_sin_time:.2f} ms")
 
     # Sort the cosine similarities
+    start_time = time.time()
     sorted_cos_sim = sorted(cosine_similarities, key=lambda k: cosine_similarities[k], reverse=True)
+    end_time = time.time()
+    sort_cos_sim_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Sorting cosine similarities took: {sort_cos_sim_time:.2f} ms")
 
     print(sorted_cos_sim)
 
