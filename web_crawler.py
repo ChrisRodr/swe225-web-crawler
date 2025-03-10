@@ -354,7 +354,7 @@ def query_data():
     for doc_id in candidate_docs:
         # Avoid division by zero
         if query_norm * doc_norms.get(doc_id, 0) > 0:
-            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.(doc_id, 0))
+            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.get(doc_id, 0))
         else:
             cosine_sim = 0.0
         cosine_similarities[doc_id] = cosine_sim
