@@ -302,6 +302,7 @@ def list_ranked_documents(posting_map):
 
 def query_data():
 
+    # Get user query
     tokened_query = promt_user()
 
     total_start_time = time.time()
@@ -352,8 +353,8 @@ def query_data():
     cosine_similarities = {}
     for doc_id in candidate_docs:
         # Avoid division by zero
-        if query_norm * doc_norms[doc_id] > 0:
-            cosine_sim = dot_products[doc_id] / (query_norm * doc_norms[doc_id])
+        if query_norm * doc_norms.(doc_id, 0) > 0:
+            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.(doc_id, 0))
         else:
             cosine_sim = 0.0
         cosine_similarities[doc_id] = cosine_sim
