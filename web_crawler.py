@@ -302,11 +302,18 @@ def list_ranked_documents(posting_map):
 
 def query_data():
 
-    # Get user query
+    # Query Set up #
+    doc_norms = load_doc_norm()
+    mapping_file = 'mapping_table.txt'
+    target_mapping = load_mapping_table(mapping_file, True)
+
+    ##################
+    # Get user query #
+    ##################
     tokened_query = promt_user()
 
+    # Query with cosine sim
     total_start_time = time.time()
-
     print("Processing query...")
     start_time = time.time()
 
@@ -341,20 +348,13 @@ def query_data():
     compute_dot_product_time = (end_time - start_time) * 1000 # In miliseconds
     print(f"Computing dot product took: {compute_dot_product_time:.2f} ms")
 
-    # Fetch the document norms
-    start_time = time.time()
-    doc_norms = load_doc_norm()
-    end_time = time.time()
-    fetch_doc_norm_time = (end_time - start_time) * 1000 # In miliseconds
-    print(f"Fetching document norms took: {fetch_doc_norm_time:.2f} ms")
-
-    # Compute the cosine imilarity for each candidate document
+    # Compute the cosine similarity for each candidate document
     start_time = time.time()
     cosine_similarities = {}
     for doc_id in candidate_docs:
         # Avoid division by zero
-        if query_norm * doc_norms.get(doc_id, 0) > 0:
-            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.get(doc_id, 0))
+        if query_norm * doc_norms.get(int(doc_id), 0) > 0:
+            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.get(int(doc_id), 0))
         else:
             cosine_sim = 0.0
         cosine_similarities[doc_id] = cosine_sim
@@ -369,13 +369,43 @@ def query_data():
     sort_cos_sim_time = (end_time - start_time) * 1000 # In miliseconds
     print(f"Sorting cosine similarities took: {sort_cos_sim_time:.2f} ms")
 
-    print(sorted_cos_sim)
+    # Print the documents
+    start_time = time.time()
 
+    print("RESULTS:")
+    print("=" * 50)
+    
+    amount_to_print = 5
+    for doc in sorted_cos_sim:
+        if amount_to_print == 0:
+            break
+        file_path = target_mapping[int(doc)]
+        import json
+        # Open and parse the JSON file
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+        # Extract the "url" value
+        url_value = data.get("url")
+
+        print(url_value)
+
+        amount_to_print -= 1
+
+    print("=" * 50)
     end_time = time.time()
-    processing_query = (end_time - start_time) * 1000 # In miliseconds
-    print(f"Processing query took: {processing_query:.2f} ms")
+    print_doc_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Printing documents took: {print_doc_time:.2f} ms")
 
-
+    total_end_time = time.time()
+    total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
+    print(f"Total execution time: {total_time:.2f} ms")
+    
+    # ###############
+    # # Old Query 
+    # print("OLD Query")
+    # print("_"*50)
+    # total_start_time = time.time()
 
     # print("Grabing postings from files...")
     # start_time = time.time()
@@ -393,13 +423,14 @@ def query_data():
 
     # print("Printing the documents")
     # start_time = time.time()
+    
+    # print("OLD WAY RESULTS:")
+    # print("=" * 50)
 
-    # # load mapping table
-    # mapping_file = 'mapping_table.txt'
-    # target_mapping = load_mapping_table(mapping_file, True)
-
-
+    # amount_to_print = 5
     # for doc in document_list:
+    #     if amount_to_print == 0:
+    #         break
     #     #print(target_mapping[int(doc)])
     #     file_path = target_mapping[int(doc)]
     #     import json
@@ -411,14 +442,17 @@ def query_data():
     #     url_value = data.get("url")
 
     #     print(url_value)
-        
+
+    #     amount_to_print -= 1
+
+    # print("=" * 50)
     # end_time = time.time()
     # print_doc_time = (end_time - start_time) * 1000 # In miliseconds
     # print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
 
-    total_end_time = time.time()
-    total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
-    print(f"Total execution time: {total_time:.2f} ms")
+    # total_end_time = time.time()
+    # total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
+    # print(f"Total execution time: {total_time:.2f} ms")
 
 ###############################################################
 
