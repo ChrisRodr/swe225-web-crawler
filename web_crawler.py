@@ -8,7 +8,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from utils.file_handler import create_folders_for_alphabet, set_token_to_file_2, \
             sort_csv_files, update_posting_duplicates_and_sort, postings_from_file, \
-            remove_current_index
+            remove_current_index, inverted_index_postings
 from utils.tokenizer import tokenize
 import re
 import time
@@ -88,6 +88,17 @@ def load_mapping_table(mapping_file: str, reverse = False):
     
     return mapping_dict
 
+def load_doc_norm():
+    doc_norm = {}
+    with open("doc_norms.txt", mode='r') as file:
+        for line in file:
+            parts = line.strip().split(" ")
+
+            if len(parts) == 2:
+                doc_id = int(parts[0])
+                norm = float(parts[1])
+                doc_norm[doc_id] = norm
+    return doc_norm
 
 def process_document(doc_text):
     """
@@ -291,35 +302,83 @@ def list_ranked_documents(posting_map):
 
 def query_data():
 
-    tokened_query = promt_user()
-
-    print("Processing query...")
-    total_start_time = time.time()
-
-    print("Grabing postings from files...")
-    start_time = time.time()
-    posting_map = grab_postings(tokened_query)
-    end_time = time.time()
-    grab_postings_time = (end_time - start_time) * 1000 # In miliseconds
-    print(f"Grabbing postings took: {grab_postings_time:.2f} ms")
-
-    print("Ranking and sorting the documents.")
-    start_time = time.time()
-    document_list = list_ranked_documents(posting_map)
-    end_time = time.time()
-    document_list_time = (end_time - start_time) * 1000 # In miliseconds
-    print(f"Ranking and sorting the retreived documents took: {document_list_time:.2f} ms")
-
-    print("Printing the documents")
-    start_time = time.time()
-
-    # load mapping table
+    # Query Set up #
+    doc_norms = load_doc_norm()
     mapping_file = 'mapping_table.txt'
     target_mapping = load_mapping_table(mapping_file, True)
 
+    ##################
+    # Get user query #
+    ##################
+    tokened_query = promt_user()
 
-    for doc in document_list:
-        #print(target_mapping[int(doc)])
+    # Query with cosine sim
+    total_start_time = time.time()
+    print("Processing query...")
+    start_time = time.time()
+
+    # Build query vector
+    start_time = time.time()
+    query_vector = defaultdict(int)
+    for token in tokened_query:
+        query_vector[token] += 1
+    end_time = time.time()
+    build_query_vector_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Building query vector took: {build_query_vector_time:.2f} ms")
+
+
+    # Compute query norm
+    start_time = time.time()
+    query_norm = math.sqrt(sum(weight ** 2 for weight in query_vector.values()))
+    end_time = time.time()
+    compute_query_norm_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing query norm took: {compute_query_norm_time:.2f} ms")
+
+    # Compute dot product from inverted index
+    start_time = time.time()
+    dot_products = defaultdict(float)
+    candidate_docs = set()
+    for token, q_weight in query_vector.items():
+        postings = postings_from_file(token, output_dir)
+        for posting in postings:
+            # Accumulate contribution to dot product: (query weight * document TF-IDF)
+            dot_products[posting['doc_id']] += q_weight * float(posting['tfidf'])
+            candidate_docs.add(posting['doc_id'])
+    end_time = time.time()
+    compute_dot_product_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing dot product took: {compute_dot_product_time:.2f} ms")
+
+    # Compute the cosine similarity for each candidate document
+    start_time = time.time()
+    cosine_similarities = {}
+    for doc_id in candidate_docs:
+        # Avoid division by zero
+        if query_norm * doc_norms.get(int(doc_id), 0) > 0:
+            cosine_sim = dot_products.get(doc_id, 0) / (query_norm * doc_norms.get(int(doc_id), 0))
+        else:
+            cosine_sim = 0.0
+        cosine_similarities[doc_id] = cosine_sim
+    end_time = time.time()
+    compute_cos_sin_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Computing cosine similarities took: {compute_cos_sin_time:.2f} ms")
+
+    # Sort the cosine similarities
+    start_time = time.time()
+    sorted_cos_sim = sorted(cosine_similarities, key=lambda k: cosine_similarities[k], reverse=True)
+    end_time = time.time()
+    sort_cos_sim_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Sorting cosine similarities took: {sort_cos_sim_time:.2f} ms")
+
+    # Print the documents
+    start_time = time.time()
+
+    print("RESULTS:")
+    print("=" * 50)
+    
+    amount_to_print = 5
+    for doc in sorted_cos_sim:
+        if amount_to_print == 0:
+            break
         file_path = target_mapping[int(doc)]
         import json
         # Open and parse the JSON file
@@ -330,14 +389,70 @@ def query_data():
         url_value = data.get("url")
 
         print(url_value)
-        
+
+        amount_to_print -= 1
+
+    print("=" * 50)
     end_time = time.time()
     print_doc_time = (end_time - start_time) * 1000 # In miliseconds
-    print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
+    print(f"Printing documents took: {print_doc_time:.2f} ms")
 
     total_end_time = time.time()
     total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
     print(f"Total execution time: {total_time:.2f} ms")
+    
+    # ###############
+    # # Old Query 
+    # print("OLD Query")
+    # print("_"*50)
+    # total_start_time = time.time()
+
+    # print("Grabing postings from files...")
+    # start_time = time.time()
+    # posting_map = grab_postings(tokened_query)
+    # end_time = time.time()
+    # grab_postings_time = (end_time - start_time) * 1000 # In miliseconds
+    # print(f"Grabbing postings took: {grab_postings_time:.2f} ms")
+
+    # print("Ranking and sorting the documents.")
+    # start_time = time.time()
+    # document_list = list_ranked_documents(posting_map)
+    # end_time = time.time()
+    # document_list_time = (end_time - start_time) * 1000 # In miliseconds
+    # print(f"Ranking and sorting the retreived documents took: {document_list_time:.2f} ms")
+
+    # print("Printing the documents")
+    # start_time = time.time()
+    
+    # print("OLD WAY RESULTS:")
+    # print("=" * 50)
+
+    # amount_to_print = 5
+    # for doc in document_list:
+    #     if amount_to_print == 0:
+    #         break
+    #     #print(target_mapping[int(doc)])
+    #     file_path = target_mapping[int(doc)]
+    #     import json
+    #     # Open and parse the JSON file
+    #     with open(file_path, 'r') as file:
+    #         data = json.load(file)
+
+    #     # Extract the "url" value
+    #     url_value = data.get("url")
+
+    #     print(url_value)
+
+    #     amount_to_print -= 1
+
+    # print("=" * 50)
+    # end_time = time.time()
+    # print_doc_time = (end_time - start_time) * 1000 # In miliseconds
+    # print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
+
+    # total_end_time = time.time()
+    # total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
+    # print(f"Total execution time: {total_time:.2f} ms")
 
 ###############################################################
 
@@ -350,9 +465,9 @@ def main():
     ### OPTIONS ###
     
     # Selection between creating the index and querying the data
-    construct_index_flag = True
+    construct_index_flag = False
     batch_size = 500
-    purge_output = True
+    purge_output = False
 
     ###############
 
