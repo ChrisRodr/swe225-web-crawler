@@ -26,6 +26,9 @@ import sys
 document_count = 55_393
 document_frequencies = defaultdict(int)
 
+global output_dir
+output_dir = "output"
+
 # This is the inverted index that will be updated along the way
 # of processing all the batches.
 inverted_index = defaultdict(list)
@@ -300,17 +303,22 @@ def list_ranked_documents(posting_map):
 
     return sorted(document_map, key=lambda k: document_map[k], reverse=True)
 
-def query_data():
+def query_data(target_query_string:str):
 
     # Query Set up #
     doc_norms = load_doc_norm()
     mapping_file = 'mapping_table.txt'
     target_mapping = load_mapping_table(mapping_file, True)
-
+    result = []
     ##################
     # Get user query #
-    ##################
-    tokened_query = promt_user()
+    ##################i
+    tokened_query = None
+    if None == target_query_string:
+        tokened_query = promt_user()
+    else:
+        # get from interface
+        tokened_query = tokenizer_query(target_query_string)
 
     # Query with cosine sim
     total_start_time = time.time()
@@ -389,6 +397,7 @@ def query_data():
         url_value = data.get("url")
 
         print(url_value)
+        result.append(url_value)
 
         amount_to_print -= 1
 
@@ -400,6 +409,9 @@ def query_data():
     total_end_time = time.time()
     total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
     print(f"Total execution time: {total_time:.2f} ms")
+
+
+    return result
     
     # ###############
     # # Old Query 
