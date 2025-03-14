@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Simple Search Page</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+            }
+            .container {
+                text-align: center;
+            }
+            form {
+                margin-top: 20px;
+            }
+            img {
+                width: 200px;  /* Adjust the width as needed */
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Search1 for something (this is for CS221)</h1>
+            <form method="POST" action="/">
+                <input type="text" name="query" placeholder="Enter search term" required>
+                <input type="submit" value="Search">
+            </form>
+        </div>
+    </body>
+</html>
+
