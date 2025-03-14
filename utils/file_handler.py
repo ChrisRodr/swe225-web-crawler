@@ -2,6 +2,7 @@ import os, shutil
 import csv
 import configparser
 import hashlib
+import tarfile
 
 
 def get_file_name_hash_value(file_name):
@@ -187,30 +188,45 @@ def update_posting_duplicates_and_sort(output_dir):
 
                         writer.writerows(sorted_rows)
 
-def postings_from_file(token, output_dir):
+def postings_from_file(token, output_dir, from_tar=False):
+    
     # Determine the folder prefix from the first letter of the token (e.g., 'c' for 'cat')
     folder_prefix = token[0].lower()
+    prefix_int = ord(folder_prefix)
+    if prefix_int not in range(97,123): folder_prefix = 'others'
     if folder_prefix.isdigit(): folder_prefix = "numbers"
-
     folder_path = os.path.join(output_dir, folder_prefix)
-
-    if not os.path.isdir(folder_path): 
-        folder_path = os.path.join(output_dir, "others")
     
     # Prepare the filename and the content for the CSV file
     filename = os.path.join(folder_path, f"{get_file_name_hash_value(token)}.csv")
 
     postings = []
-    if os.path.exists(filename):
-        with open(filename, mode='r', newline='', encoding='utf-8') as f:
-            csv_reader = csv.reader(f)
-            # TODO: For now it reads all of them. 
-            # If the query time is too slow, then consider retreiving less...
+
+    print('retrieving:', filename)
+
+    # retrieving file in tar
+    if from_tar: 
+        with tarfile.open('output_sorted.tar.gz', 'r:gz') as tar: 
+            try: 
+                member = tar.getmember(filename)
+            except KeyError: # file does not exist
+                return postings
+            f = tar.extractfile(member)
+            csv_reader = csv.reader(f.read().decode().splitlines())
             for row in csv_reader:
-                postings.append({
-                    'doc_id': row[0],
-                    'tfidf': row[1]
-                    })
+                postings.append({'doc_id': row[0], 'tfidf': row[1]})
+    
+    else:
+        if os.path.exists(filename):
+            with open(filename, mode='r', newline='', encoding='utf-8') as f:
+                csv_reader = csv.reader(f)
+                # TODO: For now it reads all of them. 
+                # If the query time is too slow, then consider retreiving less...
+                for row in csv_reader:
+                    postings.append({
+                        'doc_id': row[0],
+                        'tfidf': row[1]
+                        })
 
     return postings
 

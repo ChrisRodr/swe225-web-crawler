@@ -339,7 +339,7 @@ def query_data():
     dot_products = defaultdict(float)
     candidate_docs = set()
     for token, q_weight in query_vector.items():
-        postings = postings_from_file(token, output_dir)
+        postings = postings_from_file(token, output_dir, from_tar=True)
         for posting in postings:
             # Accumulate contribution to dot product: (query weight * document TF-IDF)
             dot_products[posting['doc_id']] += q_weight * float(posting['tfidf'])
@@ -472,7 +472,7 @@ def main():
     ###############
 
     global output_dir
-    output_dir = "output"
+    output_dir = "output_sorted"
 
     if construct_index_flag:
         # first argument - data chunk / second argument - output dir
