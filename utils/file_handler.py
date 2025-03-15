@@ -3,6 +3,8 @@ import csv
 import configparser
 import hashlib
 import tarfile
+import pandas as pd
+import json
 
 
 def get_file_name_hash_value(file_name):
@@ -200,35 +202,32 @@ def postings_from_file(token, output_dir, from_tar=False):
     # Prepare the filename and the content for the CSV file
     filename = os.path.join(folder_path, f"{get_file_name_hash_value(token)}.csv")
 
-    postings = []
+    postings = None
 
     print('retrieving:', filename)
 
-    # retrieving file in tar
+    # retrieving file in tar -- not recommended bc takes longer time
     if from_tar: 
         with tarfile.open('output_sorted.tar.gz', 'r:gz') as tar: 
             try: 
                 member = tar.getmember(filename)
             except KeyError: # file does not exist
-                return postings
+                return []
             f = tar.extractfile(member)
-            csv_reader = csv.reader(f.read().decode().splitlines())
-            for row in csv_reader:
-                postings.append({'doc_id': row[0], 'tfidf': row[1]})
-    
+            postings = pd.read_csv(f, names=['doc_id', 'tfidf'])
+
     else:
         if os.path.exists(filename):
-            with open(filename, mode='r', newline='', encoding='utf-8') as f:
-                csv_reader = csv.reader(f)
-                # TODO: For now it reads all of them. 
-                # If the query time is too slow, then consider retreiving less...
-                for row in csv_reader:
-                    postings.append({
-                        'doc_id': row[0],
-                        'tfidf': row[1]
-                        })
+            postings = pd.read_csv(filename, names=['doc_id', 'tfidf'])
+        else:
+            print('file does not exist.')
+            return []
 
-    return postings
+    if postings is not None:     
+        postings = postings.to_dict(orient='records')
+        return postings
+    else:
+        return []
 
 def inverted_index_postings(output_dir):
     """ Grabs eachall postings from the inverted index.
@@ -260,3 +259,45 @@ def remove_current_index(output_dir):
             print('directory removed.')
     else: 
         print('preserving the directory.')
+
+
+def load_mapping_table(mapping_file: str, reverse = False):
+    mapping_dict = {}
+    
+    # Open and read the mapping table file
+    with open(mapping_file, 'r') as file:
+        for line in file:
+            parts = line.strip().split(" ", 1)
+            
+            if len(parts) == 2:
+                id = int(parts[0])  
+                file_path = parts[1] 
+                file_hash = hash(file_path)
+                
+                # Store in dictionary: file_hash -> id
+                if reverse:
+                    mapping_dict[id] = file_path
+                else:
+                    mapping_dict[file_path] = id
+    
+    return mapping_dict
+
+
+def load_doc_norm():
+    doc_norm = {}
+    with open("doc_norms.txt", mode='r') as file:
+        for line in file:
+            parts = line.strip().split(" ")
+
+            if len(parts) == 2:
+                doc_id = int(parts[0])
+                norm = float(parts[1])
+                doc_norm[doc_id] = norm
+    return doc_norm
+
+
+def read_json(file_name):
+    # Read JSON content from a file
+    with open(file_name, 'r', encoding='utf-8') as file:
+        json_content = json.load(file)
+    return json_content

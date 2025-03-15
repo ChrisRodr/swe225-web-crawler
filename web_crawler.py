@@ -8,11 +8,18 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from bs4 import BeautifulSoup
 from utils.file_handler import create_folders_for_alphabet, set_token_to_file_2, \
             sort_csv_files, update_posting_duplicates_and_sort, postings_from_file, \
-            remove_current_index, inverted_index_postings
+            remove_current_index, inverted_index_postings, load_mapping_table, \
+            load_doc_norm, read_json
 from utils.tokenizer import tokenize
 import re
 import time
 import sys
+
+# import pip_system_certs.wrapt_requests
+# import certifi
+
+import requests
+# import urllib
 
 ###############################################################
 
@@ -25,9 +32,6 @@ import sys
 # token in all the documents. Needed for tf_idf scoring.
 document_count = 55_393
 document_frequencies = defaultdict(int)
-
-global output_dir
-output_dir = "output"
 
 # This is the inverted index that will be updated along the way
 # of processing all the batches.
@@ -69,39 +73,6 @@ def tokenizer(html_content):
     stemmed_tokens = [stemmer.stem(token) for token in weighted_tokens]
 
     return stemmed_tokens
-
-def load_mapping_table(mapping_file: str, reverse = False):
-    mapping_dict = {}
-    
-    # Open and read the mapping table file
-    with open(mapping_file, 'r') as file:
-        for line in file:
-            parts = line.strip().split(" ", 1)
-            
-            if len(parts) == 2:
-                id = int(parts[0])  
-                file_path = parts[1] 
-                file_hash = hash(file_path)
-                
-                # Store in dictionary: file_hash -> id
-                if reverse:
-                    mapping_dict[id] = file_path
-                else:
-                    mapping_dict[file_path] = id
-    
-    return mapping_dict
-
-def load_doc_norm():
-    doc_norm = {}
-    with open("doc_norms.txt", mode='r') as file:
-        for line in file:
-            parts = line.strip().split(" ")
-
-            if len(parts) == 2:
-                doc_id = int(parts[0])
-                norm = float(parts[1])
-                doc_norm[doc_id] = norm
-    return doc_norm
 
 def process_document(doc_text):
     """
@@ -155,12 +126,6 @@ def compute_tfidf(term_frequencies, doc_id):
             'doc_id': doc_id,
             'tfidf': round(tfidf_scores[term], 2)
         })
-
-def read_json(file_name):
-    # Read JSON content from a file
-    with open(file_name, 'r', encoding='utf-8') as file:
-        json_content = json.load(file)
-    return json_content
 
 def get_next_batch(chunk_idx, batch_size, in_dir = './DEV/'): 
     ''' gets the next n file paths each iteration. returns as list. '''
@@ -303,22 +268,17 @@ def list_ranked_documents(posting_map):
 
     return sorted(document_map, key=lambda k: document_map[k], reverse=True)
 
-def query_data(target_query_string:str):
+def query_data():
 
     # Query Set up #
     doc_norms = load_doc_norm()
     mapping_file = 'mapping_table.txt'
     target_mapping = load_mapping_table(mapping_file, True)
-    result = []
+
     ##################
     # Get user query #
-    ##################i
-    tokened_query = None
-    if None == target_query_string:
-        tokened_query = promt_user()
-    else:
-        # get from interface
-        tokened_query = tokenizer_query(target_query_string)
+    ##################
+    tokened_query = promt_user()
 
     # Query with cosine sim
     total_start_time = time.time()
@@ -347,7 +307,7 @@ def query_data(target_query_string:str):
     dot_products = defaultdict(float)
     candidate_docs = set()
     for token, q_weight in query_vector.items():
-        postings = postings_from_file(token, output_dir, from_tar=True)
+        postings = postings_from_file(token, output_dir, from_tar=False)
         for posting in postings:
             # Accumulate contribution to dot product: (query weight * document TF-IDF)
             dot_products[posting['doc_id']] += q_weight * float(posting['tfidf'])
@@ -380,9 +340,10 @@ def query_data(target_query_string:str):
     # Print the documents
     start_time = time.time()
 
-    print("RESULTS:")
+    print("\nRESULTS:")
     print("=" * 50)
     
+    candidates = []
     amount_to_print = 5
     for doc in sorted_cos_sim:
         if amount_to_print == 0:
@@ -395,11 +356,28 @@ def query_data(target_query_string:str):
 
         # Extract the "url" value
         url_value = data.get("url")
+        url_defrag = url_value.split('#')[0] # defragment
+        url_defrag = url_defrag.split('?rev')[0] # remove query string
+        url_clean = url_defrag.split('://')[-1]
+        if url_clean not in candidates:
 
-        print(url_value)
-        result.append(url_value)
-
-        amount_to_print -= 1
+            # check response
+            try: 
+                status_code = requests.get(url_defrag).status_code
+                # status_code = urllib.request.urlopen(url_defrag).status
+                if status_code==200:
+                    print(f'[success ({status_code})]', url_defrag)
+                    candidates.append(url_clean)
+                    amount_to_print -= 1
+                else: 
+                    print(f'[fail ({status_code})]', url_defrag)
+                    pass
+            # except requests.exceptions.RequestException as e:
+            except:
+                # print(f'[fail (error)]', url_value)
+                print(f'[unsecure]', url_defrag)
+                candidates.append(url_clean)
+                amount_to_print -= 1
 
     print("=" * 50)
     end_time = time.time()
@@ -409,9 +387,6 @@ def query_data(target_query_string:str):
     total_end_time = time.time()
     total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
     print(f"Total execution time: {total_time:.2f} ms")
-
-
-    return result
     
     # ###############
     # # Old Query 
