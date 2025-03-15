@@ -350,11 +350,14 @@ def query_process_similarity(tokened_query, target_mapping):
     
     candidates = []
     amount_to_print = 5
-    # url_resp = pd.read_csv('url_responses.csv', names=['url', 'resp'])
+    url_resp = load_mapping_table('url_responses.txt', reverse=True)
     for doc in sorted_cos_sim:
         if amount_to_print == 0:
             break
-        # print(doc)
+
+        # response -1 means that the status couldn't be found because of a certificate issue
+        if int(url_resp[doc]) not in (200, -1): continue
+
         file_path = target_mapping[int(doc)]
         # Open and parse the JSON file
         with open(file_path, 'r') as file:
@@ -366,13 +369,8 @@ def query_process_similarity(tokened_query, target_mapping):
         url_defrag = url_defrag.split('?rev')[0] # remove query string if it's "rev"
         url_clean = url_defrag.split('://')[-1]
         if url_clean not in candidates:
-            print(url_defrag)
-            candidates.append(url_clean)
-            amount_to_print -= 1
 
-            # temporarily commenting out
-            # # print(url_resp['url']==url_value)
-            # # check response
+            # # check response (the hard way)
             # try: 
             #     status_code = requests.get(url_defrag).status_code
             #     # status_code = urllib.request.urlopen(url_defrag).status
@@ -389,6 +387,10 @@ def query_process_similarity(tokened_query, target_mapping):
             #     print(f'[unsecure]', url_defrag)
             #     candidates.append(url_clean)
             #     amount_to_print -= 1
+
+            print(url_defrag)
+            candidates.append(url_clean)
+            amount_to_print -= 1
 
     print("=" * 50)
     end_time = time.time()
