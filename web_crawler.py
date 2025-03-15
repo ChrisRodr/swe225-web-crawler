@@ -15,12 +15,6 @@ import re
 import time
 import sys
 
-# import pip_system_certs.wrapt_requests
-# import certifi
-
-import requests
-# import urllib
-
 ###############################################################
 
 # Index Construction Functions
@@ -268,10 +262,10 @@ def list_ranked_documents(posting_map):
 
     return sorted(document_map, key=lambda k: document_map[k], reverse=True)
 
-def query_data():
+def query_data(choose_process):
+    ''' choose process is either "sum" or "similarity". '''
 
     # Query Set up #
-    doc_norms = load_doc_norm()
     mapping_file = 'mapping_table.txt'
     target_mapping = load_mapping_table(mapping_file, True)
 
@@ -279,6 +273,17 @@ def query_data():
     # Get user query #
     ##################
     tokened_query = promt_user()
+    
+    # return results based off of highest summed tfidf value
+    if choose_process=='sum': query_process_sum(tokened_query, target_mapping)
+    
+    # return results based off of cosine similarity
+    elif choose_process=='similarity': query_process_similarity(tokened_query, target_mapping) 
+
+
+def query_process_similarity(tokened_query, target_mapping):
+    
+    doc_norms = load_doc_norm()
 
     # Query with cosine sim
     total_start_time = time.time()
@@ -345,11 +350,12 @@ def query_data():
     
     candidates = []
     amount_to_print = 5
+    # url_resp = pd.read_csv('url_responses.csv', names=['url', 'resp'])
     for doc in sorted_cos_sim:
         if amount_to_print == 0:
             break
+        # print(doc)
         file_path = target_mapping[int(doc)]
-        import json
         # Open and parse the JSON file
         with open(file_path, 'r') as file:
             data = json.load(file)
@@ -357,27 +363,32 @@ def query_data():
         # Extract the "url" value
         url_value = data.get("url")
         url_defrag = url_value.split('#')[0] # defragment
-        url_defrag = url_defrag.split('?rev')[0] # remove query string
+        url_defrag = url_defrag.split('?rev')[0] # remove query string if it's "rev"
         url_clean = url_defrag.split('://')[-1]
         if url_clean not in candidates:
+            print(url_defrag)
+            candidates.append(url_clean)
+            amount_to_print -= 1
 
-            # check response
-            try: 
-                status_code = requests.get(url_defrag).status_code
-                # status_code = urllib.request.urlopen(url_defrag).status
-                if status_code==200:
-                    print(f'[success ({status_code})]', url_defrag)
-                    candidates.append(url_clean)
-                    amount_to_print -= 1
-                else: 
-                    print(f'[fail ({status_code})]', url_defrag)
-                    pass
-            # except requests.exceptions.RequestException as e:
-            except:
-                # print(f'[fail (error)]', url_value)
-                print(f'[unsecure]', url_defrag)
-                candidates.append(url_clean)
-                amount_to_print -= 1
+            # temporarily commenting out
+            # # print(url_resp['url']==url_value)
+            # # check response
+            # try: 
+            #     status_code = requests.get(url_defrag).status_code
+            #     # status_code = urllib.request.urlopen(url_defrag).status
+            #     if status_code==200:
+            #         print(f'[success ({status_code})]', url_defrag)
+            #         candidates.append(url_clean)
+            #         amount_to_print -= 1
+            #     else: 
+            #         print(f'[fail ({status_code})]', url_defrag)
+            #         pass
+            # # except requests.exceptions.RequestException as e:
+            # except:
+            #     # print(f'[fail (error)]', url_value)
+            #     print(f'[unsecure]', url_defrag)
+            #     candidates.append(url_clean)
+            #     amount_to_print -= 1
 
     print("=" * 50)
     end_time = time.time()
@@ -388,58 +399,57 @@ def query_data():
     total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
     print(f"Total execution time: {total_time:.2f} ms")
     
-    # ###############
-    # # Old Query 
-    # print("OLD Query")
-    # print("_"*50)
-    # total_start_time = time.time()
+def query_process_sum(tokened_query, target_mapping):
 
-    # print("Grabing postings from files...")
-    # start_time = time.time()
-    # posting_map = grab_postings(tokened_query)
-    # end_time = time.time()
-    # grab_postings_time = (end_time - start_time) * 1000 # In miliseconds
-    # print(f"Grabbing postings took: {grab_postings_time:.2f} ms")
+    print("_"*50)
+    total_start_time = time.time()
 
-    # print("Ranking and sorting the documents.")
-    # start_time = time.time()
-    # document_list = list_ranked_documents(posting_map)
-    # end_time = time.time()
-    # document_list_time = (end_time - start_time) * 1000 # In miliseconds
-    # print(f"Ranking and sorting the retreived documents took: {document_list_time:.2f} ms")
+    print("Grabing postings from files...")
+    start_time = time.time()
+    posting_map = grab_postings(tokened_query)
+    end_time = time.time()
+    grab_postings_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Grabbing postings took: {grab_postings_time:.2f} ms")
 
-    # print("Printing the documents")
-    # start_time = time.time()
+    print("Ranking and sorting the documents.")
+    start_time = time.time()
+    document_list = list_ranked_documents(posting_map)
+    end_time = time.time()
+    document_list_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Ranking and sorting the retreived documents took: {document_list_time:.2f} ms")
+
+    print("Printing the documents")
+    start_time = time.time()
     
-    # print("OLD WAY RESULTS:")
-    # print("=" * 50)
+    print("OLD WAY RESULTS:")
+    print("=" * 50)
 
-    # amount_to_print = 5
-    # for doc in document_list:
-    #     if amount_to_print == 0:
-    #         break
-    #     #print(target_mapping[int(doc)])
-    #     file_path = target_mapping[int(doc)]
-    #     import json
-    #     # Open and parse the JSON file
-    #     with open(file_path, 'r') as file:
-    #         data = json.load(file)
+    amount_to_print = 5
+    for doc in document_list:
+        if amount_to_print == 0:
+            break
+        #print(target_mapping[int(doc)])
+        file_path = target_mapping[int(doc)]
+        import json
+        # Open and parse the JSON file
+        with open(file_path, 'r') as file:
+            data = json.load(file)
 
-    #     # Extract the "url" value
-    #     url_value = data.get("url")
+        # Extract the "url" value
+        url_value = data.get("url")
 
-    #     print(url_value)
+        print(url_value)
 
-    #     amount_to_print -= 1
+        amount_to_print -= 1
 
-    # print("=" * 50)
-    # end_time = time.time()
-    # print_doc_time = (end_time - start_time) * 1000 # In miliseconds
-    # print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
+    print("=" * 50)
+    end_time = time.time()
+    print_doc_time = (end_time - start_time) * 1000 # In miliseconds
+    print(f"Printing the ducuments took: {print_doc_time:.2f} ms")
 
-    # total_end_time = time.time()
-    # total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
-    # print(f"Total execution time: {total_time:.2f} ms")
+    total_end_time = time.time()
+    total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
+    print(f"Total execution time: {total_time:.2f} ms")
 
 ###############################################################
 
@@ -455,6 +465,8 @@ def main():
     construct_index_flag = False
     batch_size = 500
     purge_output = False
+
+    choose_process = 'similarity' # "sum" or "similarity"
 
     ###############
 
@@ -476,7 +488,7 @@ def main():
         print(f"Number of file read from corpus: {document_count}")
 
     else:
-        query_data()
+        query_data(choose_process)
     
 
 if __name__ == "__main__":
